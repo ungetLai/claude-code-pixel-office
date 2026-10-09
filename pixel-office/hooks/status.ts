@@ -48,5 +48,5 @@ export const groupByRoom = (workers: Worker[]) => {
     if (g) g.push(w)
     else groups.set(w.cwd, [w])
   }
-  return [...groups.values()].sort((a, b) => a[0].project.localeCompare(b[0].project))
+  return [...groups.values()].sort((a, b) => a[0].project.localeCompare(b[0].project) || a[0].cwd.localeCompare(b[0].cwd))
 }

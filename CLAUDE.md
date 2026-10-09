@@ -6,7 +6,7 @@ Claude Code mod:像素辦公室。每個 agent(主控 + subagents)是一個坐�
 - Mod 原始碼: `E:\project\mod-pixel-office\pixel-office\`
   - `hooks/register.tsx` — 接線:事件 hook、1 秒輪詢、`ui.render` 分派。`$` 不能跨 import 傳(validate 會擋),所以 `ioOf($)` 把需要的呼叫包成 `Io` 交給 sync.ts
   - `hooks/sync.ts` — 主控狀態(工具計數 + turn → running/thinking/idle)、usage/名稱慢速輪詢、共用資料夾 slot、幽靈桌、重畫判斷
-  - `hooks/svg.ts`、`desktop.tsx` — 桌面 SVG 辦公室(房間、閒置房間折疊條、用量條);`terminal.tsx` — 終端機半格字元版
+  - `hooks/svg.ts`(匯出入口)、`kit.ts`(常數/像素圖樣)、`desk.ts`、`card.ts`、`room.ts`、`hud.ts`、`desktop.tsx` — 桌面 SVG 辦公室(房間、閒置房間折疊條、用量條);`terminal.tsx` — 終端機半格字元版
   - `hooks/status.ts`、`util.ts` — 狀態表、排座、用量彙整、字串/時間工具
   - `hooks/*.test.ts` — `claude plugin test` 測試;型別檢查: 裝 typescript 後 `tsc -p pixel-office --noEmit`
   - `types/index.d.ts` — `$.state` 型別契約

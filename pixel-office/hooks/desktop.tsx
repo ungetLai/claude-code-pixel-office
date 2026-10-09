@@ -1,6 +1,7 @@
 // Desktop / remote surfaces: the office as one SVG image per project room.
 import type { Office } from '../types'
 import { DW, MIN_ROOM_W, hudSvg, moreRoomsSvg, roomStripSvg, roomSvg } from './svg'
+import { diag } from './sync'
 import { deskOrder, groupByRoom, isActive, summarizeUsage } from './status'
 
 const MAX_ROOMS = 8
@@ -41,6 +42,7 @@ export const renderDesktop = (o: Office, { Box, Text, Svg }: Ui, bodyColumns: nu
   const { limits } = summarizeUsage(o.workers)
   return (
     <Box flexDirection="column">
+      {diag.error !== '' && <Text color="red">⚠ {diag.error}</Text>}
       <Box marginBottom={1}>
         <Svg alt="用量總覽" width={W} source={hudSvg(W, limits)} />
       </Box>

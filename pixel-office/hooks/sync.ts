@@ -27,6 +27,11 @@ const DETAIL_MS = 15000 // card-only changes redraw at most this often
 const GHOST_MS = 8000 // a worker that just left stays as a dimmed empty desk
 const SLOT_FREE_MS = STALE_MS * 2 // a file untouched this long may be taken over by a new session
 const MAX_SLOTS = 32
+const NAME_MAX_BYTES = 4 * 1024 * 1024
+const SLOT_FILE = /^slot-[\w-]+\.json$/
+
+// Last tick-level failure, shown on the desktop surface so a frozen office is not a silent one.
+export const diag = { error: '' }
 
 let shareDir = ''
 let claudeDir = ''
@@ -35,6 +40,9 @@ let cwd = ''
 
 export const configure = (c: { shareDir: string; claudeDir: string; cwd: string; project: string }) => {
   ;({ shareDir, claudeDir, cwd, project } = c)
+  slot = ''
+  lastPayload = ''
+  lastWrite = -Infinity
 }
 
 // ───────────── Main agent: derived from tool calls and turns ─────────────
@@ -104,6 +112,7 @@ const readSessionName = async (io: Io, now: number) => {
     const st = await io.stat(file)
     if (st.mtimeMs === nameMtime) return
     nameMtime = st.mtimeMs
+    if (st.size > NAME_MAX_BYTES) return
     const text = await io.read(file)
     const hits = [...text.matchAll(/"customTitle":("(?:[^"\\]|\\.)*")/g)]
     if (hits.length) sessionName = String(JSON.parse(hits[hits.length - 1][1]))
@@ -120,7 +129,7 @@ const peerCache = new Map<string, { mtimeMs: number; data: PeerFile }>()
 
 type Entry = { name: string; kind: string; mtimeMs: number }
 
-const claimSlot = (files: Entry[], now: number) => {
+export const claimSlot = (files: Entry[], now: number) => {
   const free = files.filter(f => now - f.mtimeMs > SLOT_FREE_MS).sort((a, b) => a.name.localeCompare(b.name))[0]
   if (free) return free.name
   const taken = new Set(files.map(f => f.name))
@@ -140,7 +149,7 @@ const parse = (text: string): PeerFile | undefined => {
 const share = async (io: Io, mine: Worker[], now: number): Promise<Worker[]> => {
   if (!shareDir) return []
   const entries = (await io.list(shareDir).catch(() => [])) as Entry[]
-  const files = entries.filter(f => f.kind === 'file' && f.name.endsWith('.json'))
+  const files = entries.filter(f => f.kind === 'file' && SLOT_FILE.test(f.name))
   if (!slot) slot = claimSlot(files, now)
 
   const payload = JSON.stringify(mine)
@@ -196,16 +205,16 @@ export const refresh = async (io: Io, alwaysDraw: boolean): Promise<{ workers: W
   const mainName = sessionName || (await io.model().catch(() => '')) || 'Claude'
 
   const present = new Set<string>([MAIN])
-  const mk = (id: string, name: string, type: string, description: string, status: string, lastTool?: string): Worker => {
+  const mk = (id: string, name: string, type: string, description: string, status: string, lastTool?: string, withUsage = false): Worker => {
     present.add(id)
     const old = known.get(id)
     const since = old && old.status === status ? old.since : now
-    const w: Worker = { id: `${SID}:${id}`, session: SID, project, cwd, name, type, description, status, lastTool, since, usage: u }
+    const w: Worker = { id: `${SID}:${id}`, session: SID, project, cwd, name, type, description, status, lastTool, since, usage: withUsage ? u : undefined }
     known.set(id, w)
     return w
   }
   const mine: Worker[] = [
-    { ...mk(MAIN, mainName, 'main', '主要對話', main.status, main.lastTool), since: main.since || now },
+    { ...mk(MAIN, mainName, 'main', '主要對話', main.status, main.lastTool, true), since: main.since || now },
     ...list.map(a => mk(a.id, String(a.name ?? a.type ?? 'agent'), String(a.type ?? '-'), String(a.description ?? ''), a.status, subTool.get(a.id))),
   ]
   for (const id of known.keys()) {

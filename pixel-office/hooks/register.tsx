@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Office } from '../types'
 import { pruneSeen, renderDesktop } from './desktop'
 import type { Io } from './sync'
-import { configure, refresh, subagentTool, toolEnd, toolStart, turnState } from './sync'
+import { configure, diag, refresh, subagentTool, toolEnd, toolStart, turnState } from './sync'
 import { renderTerminal } from './terminal'
 
 const PANE = 'pixel-office'
@@ -38,7 +38,9 @@ const tick = async ($: EngineInterface) => {
     if (!r) return
     pruneSeen(new Set(r.workers.map(w => w.id)))
     await update($, office, (o: Office) => ({ workers: r.workers, frame: o.frame + 1, now: r.now }))
-  } catch {
+    diag.error = ''
+  } catch (err) {
+    diag.error = err instanceof Error ? err.message : String(err)
   } finally {
     busy = false
   }
@@ -54,7 +56,7 @@ export const register: Register = on => {
     // (CLAUDE_CODE_PLUGIN_DIRS) it does not, so ask the environment. No home: no sharing, a solo office.
     const home = root.includes('/.claude/')
       ? root.split('/.claude/')[0]
-      : String((await $.env.get('USERPROFILE')) ?? '').split('\\').join('/')
+      : String((await $.env.get('USERPROFILE')) || (await $.env.get('HOME')) || '').split('\\').join('/')
     const claudeDir = home ? `${home}/.claude` : ''
     configure({ shareDir: claudeDir ? `${claudeDir}/pixel-office` : '', claudeDir, cwd, project })
     await $.command.register({ name: 'office', description: '開啟像素辦公室' })
@@ -97,7 +99,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     terminalSurface = e.surface === 'terminal'
     const o = await read($, office)
-    const ui = $.ui.resolve(e) as any
+    const ui = $.ui.resolve(e) as Parameters<typeof renderDesktop>[1]
     if (terminalSurface) return renderTerminal(o, ui)
     return renderDesktop(o, ui, (e.props as { bodyColumns?: number } | undefined)?.bodyColumns ?? 100)
   })

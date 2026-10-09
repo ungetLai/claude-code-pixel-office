@@ -19,10 +19,11 @@ export const clip = (s: string, units: number) => {
 }
 
 export const wrap = (s: string, units: number, maxLines: number) => {
+  const text = s.replace(/\s+/g, ' ').trim()
   const lines: string[] = []
   let cur = ''
   let n = 0
-  for (const c of s.replace(/\s+/g, ' ')) {
+  for (const c of text) {
     if (n + cw(c) > units) {
       lines.push(cur)
       cur = ''
@@ -33,7 +34,7 @@ export const wrap = (s: string, units: number, maxLines: number) => {
     n += cw(c)
   }
   if (lines.length < maxLines && cur) lines.push(cur)
-  if (lines.length === maxLines && s.length > lines.join('').length) lines[maxLines - 1] = clip(lines[maxLines - 1], units - 1).replace(/…$/, '') + '…'
+  if (lines.length === maxLines && text.length > lines.join('').length) lines[maxLines - 1] = clip(lines[maxLines - 1], units - 1).replace(/…$/, '') + '…'
   return lines.length ? lines : ['-']
 }
 
