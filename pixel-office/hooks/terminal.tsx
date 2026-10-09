@@ -1,6 +1,6 @@
 // Terminal surface: pixel workers drawn with half-block characters.
 import type { Office, Worker } from '../types'
-import { HAIR, SKIN } from './svg'
+import { HAIR, SKIN } from './kit'
 import { deskOrder, groupByRoom, statusOf, summarizeUsage } from './status'
 import { LIMIT_LABEL, fmtK, hash, untilReset } from './util'
 
