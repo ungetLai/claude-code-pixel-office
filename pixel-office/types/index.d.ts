@@ -1,3 +1,10 @@
+export type Usage = {
+  ctxTokens?: number
+  ctxWindow?: number
+  ctxPercent?: number
+  limits: { kind: string; percentUsed: number; resetsAt?: string }[]
+  costUsd?: number
+}
 export type Worker = {
   id: string
   session: string
@@ -9,6 +16,7 @@ export type Worker = {
   status: string
   lastTool?: string
   since: number
+  usage?: Usage
 }
 export type Office = { workers: Worker[]; frame: number; now: number }
 

@@ -24,7 +24,7 @@ claude-code-pixel-office/
 git clone https://github.com/ungetLai/claude-code-pixel-office.git
 ```
 
-記下 `pixel-office` 子資料夾的**絕對路徑**,下面稱為 `<MOD_DIR>`,例如 `D:\work\mod-pixel-office\pixel-office`。
+記下 `pixel-office` 子資料夾的**絕對路徑**,下面稱為 `<MOD_DIR>`,例如 `D:\work\claude-code-pixel-office\pixel-office`。
 
 ### 2. 驗證(可選)
 
@@ -59,6 +59,7 @@ claude --plugin-dir <MOD_DIR>
 
 ## 運作說明
 
+- 滑鼠移到小人上顯示狀態卡:名稱、專案、類型、狀態、任務、最近工具,以及該 session 的 Context 用量、方案額度(5h/7d)與費用。辦公室頂端有總覽列(額度 + 所有 session 總費用)。額度只有訂閱方案才有資料;用量為 session 層級,無法細分到單一 subagent。
 - 每個 session 每秒把自己的 agent 狀態寫到共用資料夾 `<sessionId>.json`,同時讀取其他 session 的檔案合併顯示。
 - 超過 6 秒沒更新視為離線(舊檔會留著但被忽略,`$.fs` 無刪檔功能)。
 - 共用資料夾位置:由 plugin 根目錄推得 —— 若路徑含 `/.claude/` 則為其前面的 `.claude/pixel-office`,否則為 `<MOD_DIR>/.claude/pixel-office`(已被 .gitignore 排除)。

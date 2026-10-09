@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Office, Worker } from '../types'
+import type { Office, Usage, Worker } from '../types'
 
 const PANE = 'pixel-office'
 const MAIN = 'main'
@@ -64,13 +64,37 @@ const main = { status: 'idle', since: 0, lastTool: undefined as string | undefin
 const subTool = new Map<string, string>()
 const known = new Map<string, Worker>()
 
+const fmtK = (n?: number) => (n === undefined ? '-' : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n))
+const LIMIT_LABEL: Record<string, string> = { five_hour: '5h 額度', seven_day: '7d 額度', spend_limit: '花費上限' }
+const untilReset = (iso: string | undefined, now: number) => {
+  if (!iso) return ''
+  const m = Math.max(0, Math.round((Date.parse(iso) - now) / 60000))
+  return m >= 60 ? `・${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}後重置` : `・${m}m後重置`
+}
+
+const readUsage = async ($: any): Promise<Usage | undefined> => {
+  try {
+    const u = await $.session.usage()
+    return {
+      ctxTokens: u.context?.tokens,
+      ctxWindow: u.context?.window,
+      ctxPercent: u.context?.percent,
+      limits: (u.rateLimits ?? []).map((r: any) => ({ kind: r.kind, percentUsed: r.percentUsed, resetsAt: r.resetsAt })),
+      costUsd: u.cost?.usd,
+    }
+  } catch {
+    return undefined
+  }
+}
+
 const refresh = async ($: any) => {
   const list = await $.agent.list()
   const now = await $.clock.now()
+  const usage = await readUsage($)
   const mk = (id: string, name: string, type: string, description: string, status: string, lastTool?: string): Worker => {
     const old = known.get(id)
     const since = old && old.status === status ? old.since : now
-    const w = { id: `${SID}:${id}`, session: SID, project, cwd, name, type, description, status, lastTool, since }
+    const w = { id: `${SID}:${id}`, session: SID, project, cwd, name, type, description, status, lastTool, since, usage }
     known.set(id, w)
     return w
   }
@@ -161,13 +185,27 @@ export const register: Register = on => {
               {rows}
               <Text bold>{w.name.slice(0, 13)}</Text>
               <Box position="absolute" top={1} left={0} display="none" hover={{ display: 'flex' }}
-                flexDirection="column" borderStyle="round" borderColor={st.color} paddingX={1} width={32}>
+                flexDirection="column" borderStyle="round" borderColor={st.color} paddingX={1} width={36}>
                 <Text bold>{w.name}</Text>
                 <Text>專案: {w.project}</Text>
                 <Text>類型: {w.type}</Text>
                 <Text color={st.color}>狀態: {st.label} ({sec(w)}s)</Text>
                 <Text>任務: {w.description.slice(0, 28)}</Text>
                 <Text>最近工具: {w.lastTool ?? '-'}</Text>
+                {w.usage && (
+                  <>
+                    <Text dimColor>── Session 用量 ──</Text>
+                    {w.usage.ctxPercent !== undefined && (
+                      <Text>Context {w.usage.ctxPercent}% ({fmtK(w.usage.ctxTokens)}/{fmtK(w.usage.ctxWindow)})</Text>
+                    )}
+                    {w.usage.limits.map(l => (
+                      <Text key={l.kind} color={l.percentUsed >= 90 ? '#f87171' : undefined}>
+                        {LIMIT_LABEL[l.kind] ?? l.kind} {l.percentUsed}%{untilReset(l.resetsAt, o.now)}
+                      </Text>
+                    ))}
+                    {w.usage.costUsd !== undefined && <Text>費用 ${w.usage.costUsd.toFixed(2)}</Text>}
+                  </>
+                )}
               </Box>
             </Box>
           )
@@ -186,6 +224,27 @@ export const register: Register = on => {
         </Box>
       ))
 
-    return <Box flexDirection="column">{rowsOut}</Box>
+    // Overview: plan limits are account-wide (take the newest reading); cost sums per session.
+    const bySession = new Map<string, Worker>()
+    for (const w of o.workers) if (w.usage && !bySession.has(w.session)) bySession.set(w.session, w)
+    const sessions = [...bySession.values()]
+    const limits = new Map<string, { kind: string; percentUsed: number; resetsAt?: string }>()
+    for (const w of sessions) for (const l of w.usage!.limits) {
+      const cur = limits.get(l.kind)
+      if (!cur || l.percentUsed > cur.percentUsed) limits.set(l.kind, l)
+    }
+    const totalCost = sessions.reduce((a, w) => a + (w.usage!.costUsd ?? 0), 0)
+    const overview = sessions.length > 0 && (
+      <Box flexDirection="row" marginBottom={1}>
+        {[...limits.values()].map(l => (
+          <Text key={l.kind} color={l.percentUsed >= 90 ? '#f87171' : '#a3e635'}>
+            {LIMIT_LABEL[l.kind] ?? l.kind} {l.percentUsed}%{untilReset(l.resetsAt, o.now)}{'   '}
+          </Text>
+        ))}
+        <Text>總費用 ${totalCost.toFixed(2)} <Text dimColor>({sessions.length} sessions)</Text></Text>
+      </Box>
+    )
+
+    return <Box flexDirection="column">{overview}{rowsOut}</Box>
   })
 }
