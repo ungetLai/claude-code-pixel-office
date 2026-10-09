@@ -518,7 +518,7 @@ const roomSvg = (ws: Worker[], maxCols: number) => {
     .map((w, i) => {
       const st = STATUS[w.status] ?? STATUS.idle
       let x = pos[i].x + DW - 8
-      if (x + CW > W - 4) x = pos[i].x - CW + 8
+      if (x + CW > W - 4) x = Math.max(4, pos[i].x - CW + 8) // flip left, but never past the room's left edge
       const y = Math.max(HEAD + 4, Math.min(pos[i].y + 8, H - cards[i].h - 4))
       return (
         `<g id="c${i}" class="card" transform="translate(${x} ${y})">` +
