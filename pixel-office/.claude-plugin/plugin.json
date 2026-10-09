@@ -1,0 +1,1 @@
+{ "name": "pixel-office", "version": "0.1.0", "description": "Pixel-art office pane: every agent sits at a desk; hover a worker to see its status.", "types": "./types/index.d.ts" }

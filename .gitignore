@@ -1,0 +1,5 @@
+# runtime session files written by the mod (when plugin root has no /.claude/ segment)
+pixel-office/.claude/
+# auto-generated type stubs
+pixel-office/.claude-plugin/types/
+node_modules/
