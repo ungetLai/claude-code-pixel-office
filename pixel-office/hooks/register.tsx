@@ -549,6 +549,8 @@ const hudSvg = (W: number, limits: { kind: string; percentUsed: number; resetsAt
   const H = 60
   let out = `<rect width="${W}" height="${H}" fill="#10131d" stroke="#2a3350" stroke-width="2"/>`
   let x = 16
+  // Always keep the bar populated: plan limits can be empty (API key, or before the first reply).
+  if (!limits.length) out += `<text x="16" y="40" font-size="12" fill="#8f9bb5" font-family="${FONT}">額度資訊暫無(尚無 rate limit 資料)</text>`
   for (const l of limits) {
     const p = Math.max(0, Math.min(100, l.percentUsed))
     out += `<text x="${x}" y="22" font-size="12" fill="#cbd5e1" font-family="${FONT}">${esc(LIMIT_LABEL[l.kind] ?? l.kind)}</text>` +
@@ -629,11 +631,9 @@ export const register: Register = on => {
       const W = Math.max(...rooms.map(r => r.W))
       return (
         <Box flexDirection="column">
-          {sessions.length > 0 && (
-            <Box marginBottom={1}>
-              <Svg alt="用量總覽" width={W} source={hudSvg(W, [...limits.values()])} />
-            </Box>
-          )}
+          <Box marginBottom={1}>
+            <Svg alt="用量總覽" width={W} source={hudSvg(W, [...limits.values()])} />
+          </Box>
           {rooms.map((r, i) => (
             <Box key={`room-${i}`} marginBottom={1}>
               <Svg alt="像素辦公室" width={r.W} height={r.H} isInteractive source={r.source} />
