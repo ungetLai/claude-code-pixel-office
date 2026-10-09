@@ -2,7 +2,7 @@
 import type { Office, Worker } from '../types'
 import { HAIR, SKIN } from './kit'
 import { deskOrder, groupByRoom, statusOf, summarizeUsage } from './status'
-import { LIMIT_LABEL, fmtK, hash, untilReset } from './util'
+import { LIMIT_LABEL, clip, fmtK, hash, untilReset } from './util'
 
 // 12x8 pixel worker at a desk; two pixels per terminal row via half blocks.
 const SPRITE = [
@@ -60,7 +60,7 @@ export const renderTerminal = (o: Office, { Box, Text }: Ui) => {
     return (
       <Box key={`w-${w.id}`} flexDirection="column" marginRight={1} width={12}>
         {rows}
-        <Text bold><Text color={st.color}>{blink ? (o.frame % 2 ? '●' : '○') : w.status === 'idle' ? 'z' : '●'}</Text> {w.name.slice(0, 10)}</Text>
+        <Text bold><Text color={st.color}>{blink ? (o.frame % 2 ? '●' : '○') : w.status === 'idle' ? 'z' : '●'}</Text> {clip(w.name, 10)}</Text>
         <Box position="absolute" top={1} left={0} display="none" hover={{ display: 'flex' }}
           flexDirection="column" borderStyle="round" borderColor={st.color} paddingX={1} width={36}>
           <Text bold>{w.name}</Text>

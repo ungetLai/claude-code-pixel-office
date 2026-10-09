@@ -35,10 +35,10 @@ const tick = async ($: EngineInterface) => {
   busy = true
   try {
     const r = await refresh(ioOf($), terminalSurface)
+    diag.error = ''
     if (!r) return
     pruneSeen(new Set(r.workers.map(w => w.id)))
     await update($, office, (o: Office) => ({ workers: r.workers, frame: o.frame + 1, now: r.now }))
-    diag.error = ''
   } catch (err) {
     diag.error = err instanceof Error ? err.message : String(err)
   } finally {
@@ -60,7 +60,7 @@ export const register: Register = on => {
     const claudeDir = home ? `${home}/.claude` : ''
     configure({ shareDir: claudeDir ? `${claudeDir}/pixel-office` : '', claudeDir, cwd, project })
     await $.command.register({ name: 'office', description: '開啟像素辦公室' })
-    void $.ui.open({ id: PANE, title: '像素辦公室' })
+    void $.ui.open({ id: PANE, title: '像素辦公室' }).catch(() => {})
     await tick($)
     timer?.cancel()
     timer = $.clock.every(1000, () => void tick($))
